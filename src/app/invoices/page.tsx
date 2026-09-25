@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatNaira } from "@/lib/format-currency";
 
 interface Contact {
   id: string;
@@ -30,10 +31,6 @@ interface Invoice {
   total: string;
   notes: string | null;
   items: InvoiceItem[];
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -189,13 +186,13 @@ export default function InvoicesPage() {
                     <div key={idx} className="grid grid-cols-12 gap-2">
                       <input placeholder="Description" value={item.description} onChange={(e) => updateItem(idx, "description", e.target.value)} className="col-span-5 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" required />
                       <input placeholder="Qty" type="number" step="0.01" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="col-span-2 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
-                      <input placeholder="Price" type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
+                      <input placeholder="Price (₦)" type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
                       <button type="button" onClick={() => removeItem(idx)} className="col-span-1 text-red-500 text-xs">✕</button>
                     </div>
                   ))}
                 </div>
                 <div className="mt-3 text-right text-sm font-semibold text-slate-900">
-                  Total: {fmt(parseFloat(recalc(form.items).total))}
+                  Total: {formatNaira(parseFloat(recalc(form.items).total))}
                 </div>
               </div>
 
@@ -226,7 +223,7 @@ export default function InvoicesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <p className="text-sm font-semibold text-slate-900">{fmt(parseFloat(inv.total))}</p>
+                <p className="text-sm font-semibold text-slate-900">{formatNaira(parseFloat(inv.total))}</p>
                 <select
                   value={inv.status}
                   onChange={(e) => { e.stopPropagation(); handleStatusChange(inv, e.target.value as Invoice["status"]); }}
@@ -249,8 +246,8 @@ export default function InvoicesPage() {
                     <tr className="text-slate-500">
                       <th className="py-1 text-left">Item</th>
                       <th className="py-1 text-right">Qty</th>
-                      <th className="py-1 text-right">Unit Price</th>
-                      <th className="py-1 text-right">Amount</th>
+                      <th className="py-1 text-right">Unit Price (₦)</th>
+                      <th className="py-1 text-right">Amount (₦)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -258,15 +255,15 @@ export default function InvoicesPage() {
                       <tr key={item.id} className="text-slate-900">
                         <td className="py-1">{item.description}</td>
                         <td className="py-1 text-right">{item.quantity}</td>
-                        <td className="py-1 text-right">{fmt(parseFloat(item.unitPrice))}</td>
-                        <td className="py-1 text-right">{fmt(parseFloat(item.amount))}</td>
+                        <td className="py-1 text-right">{formatNaira(parseFloat(item.unitPrice))}</td>
+                        <td className="py-1 text-right">{formatNaira(parseFloat(item.amount))}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-slate-200 font-semibold">
                       <td className="py-1" colSpan={3}>Total</td>
-                      <td className="py-1 text-right">{fmt(parseFloat(inv.total))}</td>
+                      <td className="py-1 text-right">{formatNaira(parseFloat(inv.total))}</td>
                     </tr>
                   </tfoot>
                 </table>
