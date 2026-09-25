@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { COA_GROUPS, groupForCode } from "@/db/chart-of-accounts";
 
 interface Account {
   id: string;
@@ -29,6 +30,8 @@ export default function AccountsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [loadingStandard, setLoadingStandard] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = async () => {
     const res = await fetch("/api/accounts");
@@ -72,6 +75,31 @@ export default function AccountsPage() {
     await load();
   };
 
+  const handleLoadStandard = async () => {
+    if (!confirm("Load the standard Jojuni chart of accounts? Existing accounts are kept; only missing codes are added.")) return;
+    setLoadingStandard(true);
+    const res = await fetch("/api/accounts/standard", { method: "POST" });
+    const data = await res.json();
+    setLoadingStandard(false);
+    setNotice(
+      res.ok
+        ? `Standard chart loaded: ${data.added} account(s) added, ${data.skipped} already existed.`
+        : "Failed to load the standard chart of accounts."
+    );
+    await load();
+  };
+
+  // Group accounts under their section heading, in the standard order.
+  const grouped = accounts.reduce<Record<string, Account[]>>((acc, a) => {
+    const g = groupForCode(a.code);
+    (acc[g] ||= []).push(a);
+    return acc;
+  }, {});
+  const groupOrder = [
+    ...COA_GROUPS.filter((g) => grouped[g]),
+    ...Object.keys(grouped).filter((g) => !(COA_GROUPS as readonly string[]).includes(g)).sort(),
+  ];
+
   if (loading) return <div className="p-8 text-slate-500">Loading...</div>;
 
   return (
@@ -79,15 +107,33 @@ export default function AccountsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Chart of Accounts</h1>
-          <p className="mt-1 text-sm text-slate-500">{accounts.length} accounts configured</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {accounts.length} accounts configured · 1xxx Assets · 2xxx Liabilities · 3xxx Equity · 4xxx Income · 5xxx Expenses
+          </p>
         </div>
-        <button
-          onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); }}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-        >
-          + New Account
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleLoadStandard}
+            disabled={loadingStandard}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {loadingStandard ? "Loading..." : "Load Standard Chart"}
+          </button>
+          <button
+            onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); }}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            + New Account
+          </button>
+        </div>
       </div>
+
+      {notice && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} className="text-xs font-medium text-emerald-700 hover:text-emerald-900">Dismiss</button>
+        </div>
+      )}
 
       {/* Form Modal */}
       {showForm && (
@@ -111,7 +157,7 @@ export default function AccountsPage() {
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-600">Description</label>
-                <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Describe exactly what should be recorded in this account" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="rounded" />
@@ -138,32 +184,14 @@ export default function AccountsPage() {
               <th className="px-4 py-3 text-left font-medium text-slate-600">Code</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Name</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Type</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Description</th>
+              <th className="px-4 py-3 text-left font-medium text-slate-600">What to record here</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
               <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {accounts.map((a) => (
-              <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50">
-                <td className="px-4 py-3 font-mono font-medium text-slate-900">{a.code}</td>
-                <td className="px-4 py-3 text-slate-900">{a.name}</td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[a.type]}`}>
-                    {a.type}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-slate-500">{a.description ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                    {a.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => handleEdit(a)} className="mr-2 text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button>
-                  <button onClick={() => handleDelete(a.id)} className="text-xs font-medium text-red-600 hover:text-red-800">Delete</button>
-                </td>
-              </tr>
+            {groupOrder.map((group) => (
+              <FragmentGroup key={group} title={group} accounts={grouped[group]} onEdit={handleEdit} onDelete={handleDelete} />
             ))}
           </tbody>
         </table>
@@ -172,5 +200,48 @@ export default function AccountsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function FragmentGroup({
+  title,
+  accounts,
+  onEdit,
+  onDelete,
+}: {
+  title: string;
+  accounts: Account[];
+  onEdit: (a: Account) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <>
+      <tr className="border-b border-slate-200 bg-slate-100/70">
+        <td colSpan={6} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          {title}
+        </td>
+      </tr>
+      {accounts.map((a) => (
+        <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50">
+          <td className="px-4 py-3 font-mono font-medium text-slate-900">{a.code}</td>
+          <td className="px-4 py-3 font-medium text-slate-900">{a.name}</td>
+          <td className="px-4 py-3">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[a.type]}`}>
+              {a.type}
+            </span>
+          </td>
+          <td className="max-w-md px-4 py-3 text-slate-500">{a.description ?? "—"}</td>
+          <td className="px-4 py-3">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+              {a.isActive ? "Active" : "Inactive"}
+            </span>
+          </td>
+          <td className="px-4 py-3 text-right whitespace-nowrap">
+            <button onClick={() => onEdit(a)} className="mr-2 text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button>
+            <button onClick={() => onDelete(a.id)} className="text-xs font-medium text-red-600 hover:text-red-800">Delete</button>
+          </td>
+        </tr>
+      ))}
+    </>
   );
 }

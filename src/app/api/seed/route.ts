@@ -7,45 +7,23 @@ import {
   invoices,
   invoiceItems,
 } from "@/db/schema";
+import { STANDARD_CHART_OF_ACCOUNTS } from "@/db/chart-of-accounts";
 import { NextResponse } from "next/server";
 
 export async function POST() {
   try {
     // ─── Chart of Accounts ────────────────────────────────────────
-    const accountData = [
-      // Assets (1000-1999)
-      { code: "1000", name: "Cash", type: "asset" as const, description: "Operating cash account" },
-      { code: "1100", name: "Accounts Receivable", type: "asset" as const, description: "Money owed by clients" },
-      { code: "1200", name: "Petty Cash", type: "asset" as const, description: "Small cash fund" },
-      { code: "1500", name: "Office Equipment", type: "asset" as const, description: "Computers, furniture, etc." },
-      { code: "1600", name: "Bank Savings", type: "asset" as const, description: "Savings account" },
-      // Liabilities (2000-2999)
-      { code: "2000", name: "Accounts Payable", type: "liability" as const, description: "Money owed to vendors" },
-      { code: "2100", name: "Credit Card", type: "liability" as const, description: "Company credit card" },
-      { code: "2200", name: "Accrued Expenses", type: "liability" as const, description: "Expenses incurred but not yet paid" },
-      { code: "2300", name: "Tax Payable", type: "liability" as const, description: "Taxes owed" },
-      // Equity (3000-3999)
-      { code: "3000", name: "Owner's Equity", type: "equity" as const, description: "Owner investment" },
-      { code: "3100", name: "Retained Earnings", type: "equity" as const, description: "Accumulated profits" },
-      // Revenue (4000-4999)
-      { code: "4000", name: "Consulting Revenue", type: "revenue" as const, description: "Consulting services income" },
-      { code: "4100", name: "Software Revenue", type: "revenue" as const, description: "Software licensing income" },
-      { code: "4200", name: "Support Revenue", type: "revenue" as const, description: "Support contract income" },
-      { code: "4300", name: "Other Revenue", type: "revenue" as const, description: "Miscellaneous income" },
-      // Expenses (5000-5999)
-      { code: "5000", name: "Salaries & Wages", type: "expense" as const, description: "Employee compensation" },
-      { code: "5100", name: "Office Rent", type: "expense" as const, description: "Monthly office rent" },
-      { code: "5200", name: "Utilities", type: "expense" as const, description: "Electricity, water, internet" },
-      { code: "5300", name: "Software Subscriptions", type: "expense" as const, description: "SaaS and tool subscriptions" },
-      { code: "5400", name: "Marketing", type: "expense" as const, description: "Advertising and marketing costs" },
-      { code: "5500", name: "Office Supplies", type: "expense" as const, description: "Stationery, printer supplies" },
-      { code: "5600", name: "Travel & Entertainment", type: "expense" as const, description: "Business travel, meals" },
-      { code: "5700", name: "Insurance", type: "expense" as const, description: "Business insurance premiums" },
-      { code: "5800", name: "Depreciation", type: "expense" as const, description: "Asset depreciation" },
-      { code: "5900", name: "Professional Services", type: "expense" as const, description: "Legal, accounting fees" },
-    ];
-
-    const insertedAccounts = await db.insert(accounts).values(accountData).returning();
+    const insertedAccounts = await db
+      .insert(accounts)
+      .values(
+        STANDARD_CHART_OF_ACCOUNTS.map(({ code, name, type, description }) => ({
+          code,
+          name,
+          type,
+          description,
+        }))
+      )
+      .returning();
 
     // ─── Contacts ────────────────────────────────────────────────
     const contactData = [
@@ -54,260 +32,192 @@ export async function POST() {
       { name: "CloudNine Systems", type: "client" as const, email: "finance@cloudnine.io", phone: "+1-555-0103" },
       { name: "Greenfield Analytics", type: "client" as const, email: "ap@greenfieldanalytics.com", phone: "+1-555-0104" },
       { name: "Pinnacle Consulting Group", type: "both" as const, email: "hello@pinnaclecg.com", phone: "+1-555-0105" },
-      { name: "TechRent Pro", type: "vendor" as const, email: "billing@techrentpro.com", phone: "+1-555-0201" },
-      { name: "SwiftOffice Supplies", type: "vendor" as const, email: "orders@swiftoffice.com", phone: "+1-555-0202" },
-      { name: "DataStream Hosting", type: "vendor" as const, email: "support@datastreamhost.com", phone: "+1-555-0203" },
-      { name: "Atlas Insurance", type: "vendor" as const, email: "claims@atlasinsurance.com", phone: "+1-555-0204" },
-      { name: "BrightPath Legal", type: "vendor" as const, email: "services@brightpathlegal.com", phone: "+1-555-0205" },
+      { name: "Vercel Inc.", type: "vendor" as const, email: "billing@vercel.com", phone: "+1-555-0201" },
+      { name: "Starlink Wholesale Distributors", type: "vendor" as const, email: "orders@starlinkwholesale.com", phone: "+1-555-0202" },
+      { name: "GitHub / JetBrains", type: "vendor" as const, email: "billing@devtools.example", phone: "+1-555-0203" },
+      { name: "OpenAI API", type: "vendor" as const, email: "billing@openai.com", phone: "+1-555-0204" },
+      { name: "BrightPath Legal & Accounting", type: "vendor" as const, email: "services@brightpathlegal.com", phone: "+1-555-0205" },
     ];
 
     const insertedContacts = await db.insert(contacts).values(contactData).returning();
 
     // Helper to find account by code
     const findAccount = (code: string) => insertedAccounts.find((a) => a.code === code)!;
+    const line = (code: string, debit: string, credit: string) => ({
+      accountId: findAccount(code).id,
+      debit,
+      credit,
+    });
 
     // ─── Transactions ────────────────────────────────────────────
     const txData = [
-      // January - Initial capital injection
       {
         date: "2025-01-02",
         description: "Owner capital investment",
         reference: "EQ-001",
         contactId: null,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1000").id, debit: "50000.00", credit: "0.00" },
-          { accountId: findAccount("3000").id, debit: "0.00", credit: "50000.00" },
-        ],
+        lines: [line("1010", "50000.00", "0.00"), line("3000", "0.00", "50000.00")],
       },
-      // January - Consulting revenue
       {
         date: "2025-01-15",
-        description: "Consulting engagement - Apex Digital",
-        reference: "INV-001",
+        description: "Custom web app build - Apex Digital",
+        reference: "INV-2025-001",
         contactId: insertedContacts[0].id,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1100").id, debit: "12000.00", credit: "0.00" },
-          { accountId: findAccount("4000").id, debit: "0.00", credit: "12000.00" },
-        ],
+        lines: [line("1110", "12000.00", "0.00"), line("4010", "0.00", "12000.00")],
       },
-      // January - Office rent
       {
-        date: "2025-01-31",
-        description: "January office rent",
-        reference: "RENT-001",
+        date: "2025-01-20",
+        description: "Development laptop purchase",
+        reference: "CAPEX-001",
         contactId: null,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5100").id, debit: "3500.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "3500.00" },
-        ],
+        lines: [line("1210", "2800.00", "0.00"), line("1010", "0.00", "2800.00")],
       },
-      // February - Software revenue
+      {
+        date: "2025-02-01",
+        description: "Vercel & Supabase hosting - February",
+        reference: "VER-0201",
+        contactId: insertedContacts[5].id,
+        status: "posted" as const,
+        lines: [line("5010", "240.00", "0.00"), line("1010", "0.00", "240.00")],
+      },
       {
         date: "2025-02-10",
-        description: "Software license - Meridian Tech",
-        reference: "INV-002",
+        description: "Website design - Meridian Tech",
+        reference: "INV-2025-002",
         contactId: insertedContacts[1].id,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1100").id, debit: "8500.00", credit: "0.00" },
-          { accountId: findAccount("4100").id, debit: "0.00", credit: "8500.00" },
-        ],
+        lines: [line("1110", "8500.00", "0.00"), line("4020", "0.00", "8500.00")],
       },
-      // February - Salaries
       {
-        date: "2025-02-28",
-        description: "February payroll",
-        reference: "PAY-002",
-        contactId: null,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5000").id, debit: "18000.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "18000.00" },
-        ],
-      },
-      // March - Support revenue
-      {
-        date: "2025-03-05",
-        description: "Annual support contract - CloudNine",
-        reference: "INV-003",
-        contactId: insertedContacts[2].id,
-        status: "posted" as const,
-        lines: [
-          { accountId: "1100" === "1100" ? findAccount("1100").id : findAccount("1100").id, debit: "15000.00", credit: "0.00" },
-          { accountId: findAccount("4200").id, debit: "0.00", credit: "15000.00" },
-        ],
-      },
-      // March - Utilities
-      {
-        date: "2025-03-15",
-        description: "Utilities - March",
-        reference: "UTIL-003",
-        contactId: null,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5200").id, debit: "850.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "850.00" },
-        ],
-      },
-      // March - Marketing
-      {
-        date: "2025-03-20",
-        description: "Digital marketing campaign",
-        reference: "MKT-003",
-        contactId: null,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5400").id, debit: "4200.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "4200.00" },
-        ],
-      },
-      // April - Consulting revenue
-      {
-        date: "2025-04-08",
-        description: "Consulting - Greenfield Analytics",
-        reference: "INV-004",
-        contactId: insertedContacts[3].id,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1100").id, debit: "9500.00", credit: "0.00" },
-          { accountId: findAccount("4000").id, debit: "0.00", credit: "9500.00" },
-        ],
-      },
-      // April - Software subscriptions expense
-      {
-        date: "2025-04-12",
-        description: "SaaS subscriptions - April",
-        reference: "SAAS-004",
+        date: "2025-02-14",
+        description: "GitHub, Copilot & JetBrains subscriptions",
+        reference: "SAAS-0214",
         contactId: insertedContacts[7].id,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5300").id, debit: "2800.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "2800.00" },
-        ],
+        lines: [line("5020", "180.00", "0.00"), line("1010", "0.00", "180.00")],
       },
-      // April - Rent
       {
-        date: "2025-04-30",
-        description: "April office rent",
-        reference: "RENT-004",
-        contactId: null,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5100").id, debit: "3500.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "3500.00" },
-        ],
-      },
-      // May - Revenue
-      {
-        date: "2025-05-05",
-        description: "Software license + support - Pinnacle",
-        reference: "INV-005",
-        contactId: insertedContacts[4].id,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1100").id, debit: "11200.00", credit: "0.00" },
-          { accountId: findAccount("4100").id, debit: "0.00", credit: "7200.00" },
-          { accountId: findAccount("4200").id, debit: "0.00", credit: "4000.00" },
-        ],
-      },
-      // May - Salaries
-      {
-        date: "2025-05-28",
-        description: "May payroll",
-        reference: "PAY-005",
-        contactId: null,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5000").id, debit: "18000.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "18000.00" },
-        ],
-      },
-      // May - Insurance
-      {
-        date: "2025-05-15",
-        description: "Business insurance - Atlas",
-        reference: "INS-005",
-        contactId: insertedContacts[8].id,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5700").id, debit: "1200.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "1200.00" },
-        ],
-      },
-      // June - Consulting revenue
-      {
-        date: "2025-06-03",
-        description: "Consulting project - Apex Digital",
-        reference: "INV-006",
-        contactId: insertedContacts[0].id,
-        status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1100").id, debit: "14500.00", credit: "0.00" },
-          { accountId: findAccount("4000").id, debit: "0.00", credit: "14500.00" },
-        ],
-      },
-      // June - Office supplies
-      {
-        date: "2025-06-10",
-        description: "Office supplies - SwiftOffice",
-        reference: "SUP-006",
+        date: "2025-03-01",
+        description: "Starlink kits wholesale purchase (3 units)",
+        reference: "PUR-2025-001",
         contactId: insertedContacts[6].id,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5500").id, debit: "450.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "450.00" },
-        ],
+        lines: [line("5040", "1650.00", "0.00"), line("2010", "0.00", "1650.00")],
       },
-      // June - Professional services
       {
-        date: "2025-06-18",
-        description: "Legal services - BrightPath",
-        reference: "LEG-006",
-        contactId: insertedContacts[9].id,
+        date: "2025-03-05",
+        description: "Starlink hardware & installation - CloudNine",
+        reference: "INV-2025-003",
+        contactId: insertedContacts[2].id,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5900").id, debit: "3500.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "3500.00" },
-        ],
+        lines: [line("1110", "3900.00", "0.00"), line("4030", "0.00", "3900.00")],
       },
-      // June - Travel
       {
-        date: "2025-06-22",
-        description: "Client site travel",
-        reference: "TRV-006",
+        date: "2025-03-10",
+        description: "Home office internet & power backup fuel - March",
+        reference: "UTL-0310",
         contactId: null,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("5600").id, debit: "1800.00", credit: "0.00" },
-          { accountId: findAccount("1000").id, debit: "0.00", credit: "1800.00" },
-        ],
+        lines: [line("5140", "320.00", "0.00"), line("1010", "0.00", "320.00")],
       },
-      // Cash collection from A/R
       {
-        date: "2025-06-25",
-        description: "Cash collection - Apex Digital",
+        date: "2025-03-20",
+        description: "Digital ads & newsletter campaign",
+        reference: "MKT-0320",
+        contactId: null,
+        status: "posted" as const,
+        lines: [line("5110", "1500.00", "0.00"), line("1010", "0.00", "1500.00")],
+      },
+      {
+        date: "2025-04-01",
+        description: "Monthly maintenance retainer - Greenfield Analytics",
+        reference: "RET-0401",
+        contactId: insertedContacts[3].id,
+        status: "posted" as const,
+        lines: [line("1010", "1200.00", "0.00"), line("4040", "0.00", "1200.00")],
+      },
+      {
+        date: "2025-04-08",
+        description: "OpenAI API credits - client chatbot project",
+        reference: "API-0408",
+        contactId: insertedContacts[8].id,
+        status: "posted" as const,
+        lines: [line("5030", "410.00", "0.00"), line("1010", "0.00", "410.00")],
+      },
+      {
+        date: "2025-04-15",
+        description: "Corporate IT training workshop - Pinnacle",
+        reference: "INV-2025-004",
+        contactId: insertedContacts[4].id,
+        status: "posted" as const,
+        lines: [line("1110", "4500.00", "0.00"), line("4050", "0.00", "4500.00")],
+      },
+      {
+        date: "2025-04-30",
+        description: "Annual company registry filing fee",
+        reference: "REG-2025",
+        contactId: null,
+        status: "posted" as const,
+        lines: [line("5150", "250.00", "0.00"), line("1010", "0.00", "250.00")],
+      },
+      {
+        date: "2025-05-02",
+        description: "Monthly maintenance retainer - Greenfield Analytics",
+        reference: "RET-0502",
+        contactId: insertedContacts[3].id,
+        status: "posted" as const,
+        lines: [line("1010", "1200.00", "0.00"), line("4040", "0.00", "1200.00")],
+      },
+      {
+        date: "2025-05-12",
+        description: "Template & theme sales (digital storefront)",
+        reference: "DIG-0512",
+        contactId: null,
+        status: "posted" as const,
+        lines: [line("1010", "760.00", "0.00"), line("4060", "0.00", "760.00")],
+      },
+      {
+        date: "2025-05-20",
+        description: "Accountant fees - corporate tax filing",
+        reference: "PUR-2025-002",
+        contactId: insertedContacts[9].id,
+        status: "posted" as const,
+        lines: [line("5120", "900.00", "0.00"), line("1010", "0.00", "900.00")],
+      },
+      {
+        date: "2025-05-31",
+        description: "Bank charges & FX fees - May",
+        reference: "BNK-0531",
+        contactId: null,
+        status: "posted" as const,
+        lines: [line("5130", "45.00", "0.00"), line("1010", "0.00", "45.00")],
+      },
+      {
+        date: "2025-06-10",
+        description: "Payment received - Apex Digital",
         reference: "RCV-001",
         contactId: insertedContacts[0].id,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1000").id, debit: "26500.00", credit: "0.00" },
-          { accountId: findAccount("1100").id, debit: "0.00", credit: "26500.00" },
-        ],
+        lines: [line("1010", "12000.00", "0.00"), line("1110", "0.00", "12000.00")],
       },
-      // Cash collection from A/R
       {
         date: "2025-06-26",
-        description: "Cash collection - Meridian Tech",
+        description: "Payment received - Meridian Tech",
         reference: "RCV-002",
         contactId: insertedContacts[1].id,
         status: "posted" as const,
-        lines: [
-          { accountId: findAccount("1000").id, debit: "8500.00", credit: "0.00" },
-          { accountId: findAccount("1100").id, debit: "0.00", credit: "8500.00" },
-        ],
+        lines: [line("1010", "8500.00", "0.00"), line("1110", "0.00", "8500.00")],
+      },
+      {
+        date: "2025-06-30",
+        description: "Owner's draw - June distribution",
+        reference: "DRW-0630",
+        contactId: null,
+        status: "posted" as const,
+        lines: [line("3010", "3000.00", "0.00"), line("1010", "0.00", "3000.00")],
       },
     ];
 
@@ -345,9 +255,9 @@ export async function POST() {
         subtotal: "12000.00",
         taxAmount: "0.00",
         total: "12000.00",
-        notes: "Consulting engagement Q1",
+        notes: "Custom web app build (4010 Software & App Dev Revenue)",
         items: [
-          { description: "Strategy consulting - 80 hours", quantity: "80", unitPrice: "150.00", amount: "12000.00" },
+          { description: "Custom web application - design & build", quantity: "1", unitPrice: "12000.00", amount: "12000.00" },
         ],
       },
       {
@@ -360,132 +270,101 @@ export async function POST() {
         subtotal: "8500.00",
         taxAmount: "0.00",
         total: "8500.00",
-        notes: "Software license - annual",
+        notes: "Corporate website redesign (4020 Website Design Revenue)",
         items: [
-          { description: "Platform license - 1 year", quantity: "1", unitPrice: "8500.00", amount: "8500.00" },
+          { description: "Website design & launch - 10 pages", quantity: "1", unitPrice: "8500.00", amount: "8500.00" },
         ],
       },
       {
         number: "INV-2025-003",
         contactId: insertedContacts[2].id,
         type: "sales" as const,
-        status: "paid" as const,
+        status: "sent" as const,
         issueDate: "2025-03-05",
         dueDate: "2025-04-05",
-        subtotal: "15000.00",
+        subtotal: "3900.00",
         taxAmount: "0.00",
-        total: "15000.00",
-        notes: "Support contract - annual",
+        total: "3900.00",
+        notes: "Starlink kits & installation (4030 Starlink Hardware & Installation)",
         items: [
-          { description: "Premium support - 12 months", quantity: "1", unitPrice: "15000.00", amount: "15000.00" },
+          { description: "Starlink Standard Kit", quantity: "3", unitPrice: "950.00", amount: "2850.00" },
+          { description: "On-site installation & mounting", quantity: "3", unitPrice: "350.00", amount: "1050.00" },
         ],
       },
       {
         number: "INV-2025-004",
-        contactId: insertedContacts[3].id,
+        contactId: insertedContacts[4].id,
         type: "sales" as const,
-        status: "paid" as const,
-        issueDate: "2025-04-08",
-        dueDate: "2025-05-08",
-        subtotal: "9500.00",
+        status: "overdue" as const,
+        issueDate: "2025-04-15",
+        dueDate: "2025-05-15",
+        subtotal: "4500.00",
         taxAmount: "0.00",
-        total: "9500.00",
-        notes: "Consulting engagement",
+        total: "4500.00",
+        notes: "Corporate IT training workshop (4050 IT Training & Consulting)",
         items: [
-          { description: "Data analytics consulting - 50 hours", quantity: "50", unitPrice: "190.00", amount: "9500.00" },
+          { description: "2-day corporate IT workshop - 15 staff", quantity: "1", unitPrice: "4500.00", amount: "4500.00" },
         ],
       },
       {
         number: "INV-2025-005",
-        contactId: insertedContacts[4].id,
+        contactId: insertedContacts[3].id,
         type: "sales" as const,
         status: "paid" as const,
-        issueDate: "2025-05-05",
-        dueDate: "2025-06-05",
-        subtotal: "11200.00",
+        issueDate: "2025-05-01",
+        dueDate: "2025-05-15",
+        subtotal: "1200.00",
         taxAmount: "0.00",
-        total: "11200.00",
-        notes: "Software + support bundle",
+        total: "1200.00",
+        notes: "Monthly retainer - May (4040 Monthly Maintenance Retainers)",
         items: [
-          { description: "Platform license - 1 year", quantity: "1", unitPrice: "7200.00", amount: "7200.00" },
-          { description: "Standard support - 12 months", quantity: "1", unitPrice: "4000.00", amount: "4000.00" },
-        ],
-      },
-      {
-        number: "INV-2025-006",
-        contactId: insertedContacts[0].id,
-        type: "sales" as const,
-        status: "sent" as const,
-        issueDate: "2025-06-03",
-        dueDate: "2025-07-03",
-        subtotal: "14500.00",
-        taxAmount: "0.00",
-        total: "14500.00",
-        notes: "Consulting project - Q2",
-        items: [
-          { description: "Advanced consulting - 100 hours", quantity: "100", unitPrice: "145.00", amount: "14500.00" },
-        ],
-      },
-      {
-        number: "INV-2025-007",
-        contactId: insertedContacts[2].id,
-        type: "sales" as const,
-        status: "overdue" as const,
-        issueDate: "2025-05-15",
-        dueDate: "2025-06-15",
-        subtotal: "7500.00",
-        taxAmount: "0.00",
-        total: "7500.00",
-        notes: "Additional support hours",
-        items: [
-          { description: "Ad-hoc support - 50 hours", quantity: "50", unitPrice: "150.00", amount: "7500.00" },
+          { description: "Website & cloud maintenance retainer - May", quantity: "1", unitPrice: "1200.00", amount: "1200.00" },
         ],
       },
       // Purchase invoices
       {
         number: "PUR-2025-001",
-        contactId: insertedContacts[5].id,
+        contactId: insertedContacts[6].id,
         type: "purchase" as const,
-        status: "paid" as const,
-        issueDate: "2025-01-10",
-        dueDate: "2025-02-10",
-        subtotal: "2800.00",
+        status: "sent" as const,
+        issueDate: "2025-03-01",
+        dueDate: "2025-03-31",
+        subtotal: "1650.00",
         taxAmount: "0.00",
-        total: "2800.00",
-        notes: "Equipment rental Q1",
+        total: "1650.00",
+        notes: "Starlink wholesale stock (5040 Starlink Inventory Purchases)",
         items: [
-          { description: "Server rack rental - 3 months", quantity: "3", unitPrice: "933.33", amount: "2800.00" },
+          { description: "Starlink Standard Kit - wholesale", quantity: "3", unitPrice: "550.00", amount: "1650.00" },
         ],
       },
       {
         number: "PUR-2025-002",
-        contactId: insertedContacts[7].id,
+        contactId: insertedContacts[9].id,
         type: "purchase" as const,
         status: "paid" as const,
-        issueDate: "2025-04-01",
-        dueDate: "2025-05-01",
-        subtotal: "2800.00",
+        issueDate: "2025-05-20",
+        dueDate: "2025-06-20",
+        subtotal: "900.00",
         taxAmount: "0.00",
-        total: "2800.00",
-        notes: "SaaS subscriptions Q2",
+        total: "900.00",
+        notes: "Corporate tax filing (5120 Professional Services & Legal)",
         items: [
-          { description: "Cloud hosting - 3 months", quantity: "3", unitPrice: "700.00", amount: "2100.00" },
-          { description: "CI/CD platform - 3 months", quantity: "3", unitPrice: "233.33", amount: "700.00" },
+          { description: "Annual corporate tax return preparation", quantity: "1", unitPrice: "900.00", amount: "900.00" },
         ],
       },
       {
         number: "PUR-2025-003",
-        contactId: insertedContacts[8].id,
+        contactId: insertedContacts[5].id,
         type: "purchase" as const,
-        status: "sent" as const,
-        issueDate: "2025-05-15",
-        dueDate: "2025-06-15",
-        subtotal: "1200.00",
+        status: "paid" as const,
+        issueDate: "2025-04-01",
+        dueDate: "2025-04-30",
+        subtotal: "720.00",
         taxAmount: "0.00",
-        total: "1200.00",
-        notes: "Insurance premium Q2",
+        total: "720.00",
+        notes: "Hosting Q2 (5010 Hosting & Cloud Infrastructure)",
         items: [
-          { description: "Business liability insurance - Q2", quantity: "1", unitPrice: "1200.00", amount: "1200.00" },
+          { description: "Vercel Pro + Supabase - 3 months", quantity: "3", unitPrice: "240.00", amount: "720.00" },
         ],
       },
     ];
