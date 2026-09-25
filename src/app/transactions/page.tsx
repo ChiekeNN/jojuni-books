@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatNaira } from "@/lib/format-currency";
 
 interface TxLine {
   id: string;
@@ -27,10 +28,6 @@ interface Account {
   code: string;
   name: string;
   type: string;
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
 export default function TransactionsPage() {
@@ -165,8 +162,8 @@ export default function TransactionsPage() {
                           <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                         ))}
                       </select>
-                      <input placeholder="Debit" value={line.debit} onChange={(e) => updateLine(idx, "debit", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
-                      <input placeholder="Credit" value={line.credit} onChange={(e) => updateLine(idx, "credit", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
+                      <input placeholder="Debit (₦)" value={line.debit} onChange={(e) => updateLine(idx, "debit", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
+                      <input placeholder="Credit (₦)" value={line.credit} onChange={(e) => updateLine(idx, "credit", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
                       <button type="button" onClick={() => removeLine(idx)} className="col-span-1 text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
                   ))}
@@ -213,24 +210,24 @@ export default function TransactionsPage() {
                   <thead>
                     <tr className="text-slate-500">
                       <th className="py-1 text-left">Account</th>
-                      <th className="py-1 text-right">Debit</th>
-                      <th className="py-1 text-right">Credit</th>
+                      <th className="py-1 text-right">Debit (₦)</th>
+                      <th className="py-1 text-right">Credit (₦)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tx.lines.map((line) => (
                       <tr key={line.id} className="text-slate-900">
                         <td className="py-1">{line.accountCode} — {line.accountName}</td>
-                        <td className="py-1 text-right">{parseFloat(line.debit) > 0 ? fmt(parseFloat(line.debit)) : ""}</td>
-                        <td className="py-1 text-right">{parseFloat(line.credit) > 0 ? fmt(parseFloat(line.credit)) : ""}</td>
+                        <td className="py-1 text-right">{parseFloat(line.debit) > 0 ? formatNaira(parseFloat(line.debit)) : ""}</td>
+                        <td className="py-1 text-right">{parseFloat(line.credit) > 0 ? formatNaira(parseFloat(line.credit)) : ""}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-slate-200 font-semibold">
                       <td className="py-1">Total</td>
-                      <td className="py-1 text-right">{fmt(tx.lines.reduce((s, l) => s + parseFloat(l.debit), 0))}</td>
-                      <td className="py-1 text-right">{fmt(tx.lines.reduce((s, l) => s + parseFloat(l.credit), 0))}</td>
+                      <td className="py-1 text-right">{formatNaira(tx.lines.reduce((s, l) => s + parseFloat(l.debit), 0))}</td>
+                      <td className="py-1 text-right">{formatNaira(tx.lines.reduce((s, l) => s + parseFloat(l.credit), 0))}</td>
                     </tr>
                   </tfoot>
                 </table>

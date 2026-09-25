@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatNaira } from "@/lib/format-currency";
 import {
   BarChart,
   Bar,
@@ -42,14 +43,6 @@ interface DashboardData {
   monthlyRevenue: { month: string; total: string }[];
   monthlyExpenses: { month: string; total: string }[];
   accountBalances: { type: string; balance: string }[];
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(n);
 }
 
 const PIE_COLORS = ["#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ef4444"];
@@ -144,9 +137,9 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Revenue" value={fmt(data.revenue)} trend="up" color="emerald" />
-        <StatCard label="Total Expenses" value={fmt(data.expenses)} trend="down" color="red" />
-        <StatCard label="Net Profit" value={fmt(data.profit)} trend={data.profit >= 0 ? "up" : "down"} color={data.profit >= 0 ? "blue" : "red"} />
+        <StatCard label="Total Revenue" value={formatNaira(data.revenue)} trend="up" color="emerald" />
+        <StatCard label="Total Expenses" value={formatNaira(data.expenses)} trend="down" color="red" />
+        <StatCard label="Net Profit" value={formatNaira(data.profit)} trend={data.profit >= 0 ? "up" : "down"} color={data.profit >= 0 ? "blue" : "red"} />
         <StatCard label="Open Invoices" value={String(data.invoices)} trend="neutral" color="amber" />
       </div>
 
@@ -162,8 +155,8 @@ export default function DashboardPage() {
                 <BarChart data={barData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => fmt(Number(v))} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v) => formatNaira(Number(v))} />
                   <Legend />
                   <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
@@ -199,7 +192,7 @@ export default function DashboardPage() {
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => fmt(Number(v))} />
+                  <Tooltip formatter={(v) => formatNaira(Number(v))} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -249,7 +242,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-slate-500">{inv.type} · Due {inv.dueDate}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-900">{fmt(parseFloat(inv.total))}</p>
+                    <p className="text-sm font-semibold text-slate-900">{formatNaira(parseFloat(inv.total))}</p>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[inv.status] ?? "bg-slate-100 text-slate-600"}`}>
                       {inv.status}
                     </span>

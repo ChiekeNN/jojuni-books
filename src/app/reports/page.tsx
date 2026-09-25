@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatNaira } from "@/lib/format-currency";
 
 type ReportType = "pnl" | "balance" | "trial";
 
@@ -28,10 +29,6 @@ interface TrialData {
   accounts: { id: string; code: string; name: string; type: string; debit: string; credit: string }[];
   totalDebit: number;
   totalCredit: number;
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
 export default function ReportsPage() {
@@ -110,14 +107,14 @@ function PnLReport({ data }: { data: PnLData }) {
             {data.revenue.map((a) => (
               <tr key={a.id} className="border-b border-slate-50">
                 <td className="py-2 text-slate-600">{a.code} — {a.name}</td>
-                <td className="py-2 text-right font-medium text-slate-900">{fmt(a.balance)}</td>
+                <td className="py-2 text-right font-medium text-slate-900">{formatNaira(a.balance)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-emerald-200">
               <td className="py-2 font-bold text-emerald-800">Total Revenue</td>
-              <td className="py-2 text-right font-bold text-emerald-800">{fmt(data.totalRevenue)}</td>
+              <td className="py-2 text-right font-bold text-emerald-800">{formatNaira(data.totalRevenue)}</td>
             </tr>
           </tfoot>
         </table>
@@ -129,14 +126,14 @@ function PnLReport({ data }: { data: PnLData }) {
             {data.expenses.map((a) => (
               <tr key={a.id} className="border-b border-slate-50">
                 <td className="py-2 text-slate-600">{a.code} — {a.name}</td>
-                <td className="py-2 text-right font-medium text-slate-900">{fmt(a.balance)}</td>
+                <td className="py-2 text-right font-medium text-slate-900">{formatNaira(a.balance)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-red-200">
               <td className="py-2 font-bold text-red-800">Total Expenses</td>
-              <td className="py-2 text-right font-bold text-red-800">{fmt(data.totalExpenses)}</td>
+              <td className="py-2 text-right font-bold text-red-800">{formatNaira(data.totalExpenses)}</td>
             </tr>
           </tfoot>
         </table>
@@ -146,7 +143,7 @@ function PnLReport({ data }: { data: PnLData }) {
           <div className="flex items-center justify-between">
             <span className="text-base font-bold text-slate-900">Net Income</span>
             <span className={`text-xl font-bold ${data.netIncome >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-              {fmt(data.netIncome)}
+              {formatNaira(data.netIncome)}
             </span>
           </div>
         </div>
@@ -172,14 +169,14 @@ function BalanceReport({ data }: { data: BalanceData }) {
                 {data.assets.map((a) => (
                   <tr key={a.id} className="border-b border-slate-50">
                     <td className="py-2 text-slate-600">{a.code} — {a.name}</td>
-                    <td className="py-2 text-right font-medium text-slate-900">{fmt(a.balance)}</td>
+                    <td className="py-2 text-right font-medium text-slate-900">{formatNaira(a.balance)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-blue-200">
                   <td className="py-2 font-bold text-blue-800">Total Assets</td>
-                  <td className="py-2 text-right font-bold text-blue-800">{fmt(data.totalAssets)}</td>
+                  <td className="py-2 text-right font-bold text-blue-800">{formatNaira(data.totalAssets)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -193,14 +190,14 @@ function BalanceReport({ data }: { data: BalanceData }) {
                 {data.liabilities.map((a) => (
                   <tr key={a.id} className="border-b border-slate-50">
                     <td className="py-2 text-slate-600">{a.code} — {a.name}</td>
-                    <td className="py-2 text-right font-medium text-slate-900">{fmt(a.balance)}</td>
+                    <td className="py-2 text-right font-medium text-slate-900">{formatNaira(a.balance)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-red-200">
                   <td className="py-2 font-bold text-red-800">Total Liabilities</td>
-                  <td className="py-2 text-right font-bold text-red-800">{fmt(data.totalLiabilities)}</td>
+                  <td className="py-2 text-right font-bold text-red-800">{formatNaira(data.totalLiabilities)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -211,14 +208,14 @@ function BalanceReport({ data }: { data: BalanceData }) {
                 {data.equity.map((a) => (
                   <tr key={a.id} className="border-b border-slate-50">
                     <td className="py-2 text-slate-600">{a.code} — {a.name}</td>
-                    <td className="py-2 text-right font-medium text-slate-900">{fmt(a.balance)}</td>
+                    <td className="py-2 text-right font-medium text-slate-900">{formatNaira(a.balance)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-purple-200">
                   <td className="py-2 font-bold text-purple-800">Total Equity</td>
-                  <td className="py-2 text-right font-bold text-purple-800">{fmt(data.totalEquity)}</td>
+                  <td className="py-2 text-right font-bold text-purple-800">{formatNaira(data.totalEquity)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -226,7 +223,7 @@ function BalanceReport({ data }: { data: BalanceData }) {
             <div className="mt-4 rounded-lg bg-slate-50 p-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-bold text-slate-900">Liabilities + Equity</span>
-                <span className="font-bold text-slate-900">{fmt(data.totalLiabilities + data.totalEquity)}</span>
+                <span className="font-bold text-slate-900">{formatNaira(data.totalLiabilities + data.totalEquity)}</span>
               </div>
             </div>
           </div>
@@ -262,22 +259,22 @@ function TrialReport({ data }: { data: TrialData }) {
                 <td className="px-4 py-2">
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{a.type}</span>
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-slate-900">{parseFloat(a.debit) > 0 ? fmt(parseFloat(a.debit)) : ""}</td>
-                <td className="px-4 py-2 text-right font-mono text-slate-900">{parseFloat(a.credit) > 0 ? fmt(parseFloat(a.credit)) : ""}</td>
+                <td className="px-4 py-2 text-right font-mono text-slate-900">{parseFloat(a.debit) > 0 ? formatNaira(parseFloat(a.debit)) : ""}</td>
+                <td className="px-4 py-2 text-right font-mono text-slate-900">{parseFloat(a.credit) > 0 ? formatNaira(parseFloat(a.credit)) : ""}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-slate-300 bg-slate-50">
               <td className="px-4 py-2 font-bold" colSpan={3}>Totals</td>
-              <td className="px-4 py-2 text-right font-bold font-mono">{fmt(data.totalDebit)}</td>
-              <td className="px-4 py-2 text-right font-bold font-mono">{fmt(data.totalCredit)}</td>
+              <td className="px-4 py-2 text-right font-bold font-mono">{formatNaira(data.totalDebit)}</td>
+              <td className="px-4 py-2 text-right font-bold font-mono">{formatNaira(data.totalCredit)}</td>
             </tr>
           </tfoot>
         </table>
         <div className="mt-4 rounded-lg bg-slate-50 p-3">
           <p className="text-xs text-slate-600">
-            Difference: <span className="font-mono font-bold">{fmt(data.totalDebit - data.totalCredit)}</span>
+            Difference: <span className="font-mono font-bold">{formatNaira(data.totalDebit - data.totalCredit)}</span>
             {Math.abs(data.totalDebit - data.totalCredit) < 0.01 ? (
               <span className="ml-2 text-emerald-600">✓ Balanced</span>
             ) : (
