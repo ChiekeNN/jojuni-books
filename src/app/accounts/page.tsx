@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { COA_GROUPS, groupForCode } from "@/db/chart-of-accounts";
+import { COA_GROUPS, STANDARD_CHART_OF_ACCOUNTS, groupForCode } from "@/db/chart-of-accounts";
 
 interface Account {
   id: string;
@@ -32,6 +32,16 @@ export default function AccountsPage() {
   const [form, setForm] = useState(emptyForm);
   const [loadingStandard, setLoadingStandard] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Standard category chosen in the form; "custom" unlocks manual code entry.
+  const [category, setCategory] = useState<string>("");
+
+  const handleCategoryChange = (code: string) => {
+    setCategory(code);
+    if (code === "custom" || code === "") return;
+    const std = STANDARD_CHART_OF_ACCOUNTS.find((a) => a.code === code);
+    if (!std) return;
+    setForm((f) => ({ ...f, code: std.code, name: std.name, type: std.type, description: std.description }));
+  };
 
   const load = async () => {
     const res = await fetch("/api/accounts");
@@ -60,12 +70,14 @@ export default function AccountsPage() {
     setShowForm(false);
     setEditing(null);
     setForm(emptyForm);
+    setCategory("");
     await load();
   };
 
   const handleEdit = (a: Account) => {
     setForm({ code: a.code, name: a.name, type: a.type, description: a.description ?? "", isActive: a.isActive });
     setEditing(a.id);
+    setCategory(STANDARD_CHART_OF_ACCOUNTS.some((s) => s.code === a.code) ? a.code : "custom");
     setShowForm(true);
   };
 
@@ -120,7 +132,7 @@ export default function AccountsPage() {
             {loadingStandard ? "Loading..." : "Load Standard Chart"}
           </button>
           <button
-            onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); }}
+            onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); setCategory(""); }}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
             + New Account
@@ -142,8 +154,37 @@ export default function AccountsPage() {
             <h2 className="text-lg font-semibold">{editing ? "Edit Account" : "New Account"}</h2>
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
+                <label className="text-xs font-medium text-slate-600">Category</label>
+                <select
+                  value={category}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Select a category...</option>
+                  {COA_GROUPS.map((g) => (
+                    <optgroup key={g} label={g}>
+                      {STANDARD_CHART_OF_ACCOUNTS.filter((a) => a.group === g).map((a) => (
+                        <option key={a.code} value={a.code}>{a.code} — {a.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                  <optgroup label="Other">
+                    <option value="custom">Custom account (enter code manually)</option>
+                  </optgroup>
+                </select>
+                <p className="mt-1 text-[11px] text-slate-500">Picking a category fills in the code, name, type and guidance automatically.</p>
+              </div>
+              <div>
                 <label className="text-xs font-medium text-slate-600">Code</label>
-                <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
+                <input
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  readOnly={category !== "custom"}
+                  placeholder={category === "custom" ? "e.g. 5160" : "Auto-filled from category"}
+                  className={`mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm ${category !== "custom" ? "bg-slate-50 text-slate-700" : ""}`}
+                  required
+                />
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-600">Name</label>

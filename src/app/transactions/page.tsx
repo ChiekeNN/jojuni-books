@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatNaira } from "@/lib/format-currency";
+import { COA_GROUPS, groupForCode } from "@/db/chart-of-accounts";
 
 interface TxLine {
   id: string;
@@ -102,6 +103,18 @@ export default function TransactionsPage() {
     setForm({ ...form, lines: form.lines.filter((_, i) => i !== idx) });
   };
 
+  // Accounts grouped under their chart-of-accounts section for the line dropdowns.
+  const accountGroups = (() => {
+    const map: Record<string, Account[]> = {};
+    for (const a of allAccounts) (map[groupForCode(a.code)] ||= []).push(a);
+    const order = [
+      ...COA_GROUPS.filter((g) => map[g]),
+      ...Object.keys(map).filter((g) => !(COA_GROUPS as readonly string[]).includes(g)).sort(),
+    ];
+    return order.map((g) => ({ group: g, accounts: map[g] }));
+  })();
+  const codeFor = (accountId: string) => allAccounts.find((a) => a.id === accountId)?.code ?? "";
+
   if (loading) return <div className="p-8 text-slate-500">Loading...</div>;
 
   return (
@@ -156,14 +169,25 @@ export default function TransactionsPage() {
                 <div className="mt-2 space-y-2">
                   {form.lines.map((line, idx) => (
                     <div key={idx} className="grid grid-cols-12 gap-2">
+                      <input
+                        value={codeFor(line.accountId)}
+                        readOnly
+                        placeholder="Code"
+                        title="Account code — filled automatically from the category"
+                        className="col-span-1 rounded-lg border border-slate-300 bg-slate-50 px-1 py-1.5 text-center font-mono text-xs text-slate-700"
+                      />
                       <select value={line.accountId} onChange={(e) => updateLine(idx, "accountId", e.target.value)} className="col-span-5 rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
-                        <option value="">Select account...</option>
-                        {allAccounts.map((a) => (
-                          <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                        <option value="">Select category...</option>
+                        {accountGroups.map(({ group, accounts }) => (
+                          <optgroup key={group} label={group}>
+                            {accounts.map((a) => (
+                              <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+                            ))}
+                          </optgroup>
                         ))}
                       </select>
                       <input placeholder="Debit (₦)" value={line.debit} onChange={(e) => updateLine(idx, "debit", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
-                      <input placeholder="Credit (₦)" value={line.credit} onChange={(e) => updateLine(idx, "credit", e.target.value)} className="col-span-3 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
+                      <input placeholder="Credit (₦)" value={line.credit} onChange={(e) => updateLine(idx, "credit", e.target.value)} className="col-span-2 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
                       <button type="button" onClick={() => removeLine(idx)} className="col-span-1 text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
                   ))}
